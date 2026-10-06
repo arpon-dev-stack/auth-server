@@ -1,7 +1,7 @@
 {
   "name": "auth-server",
   "version": "1.0.0",
-  "description": "",
+  "description": "This is the simple server for user creation, update, delete and read for mobile app and browser.",
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch index.ts",
@@ -15,9 +15,9 @@
     "format:check": "prettier --check .",
     "prepare": "husky"
   },
-  "keywords": [],
+  "keywords": ["Express", "Authentication", "Authorization", "Server"],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "module",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
