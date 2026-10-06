@@ -1,116 +1,143 @@
-# Express Authentication & Authorization Server
+# Auth Server
 
-A production-ready, highly secure Express.js authentication and authorization backend built with TypeScript, Node.js, Nodemailer, Zod, Jose, and Prisma ORM. 
+A TypeScript Express authentication service built around PostgreSQL + Prisma, JWTs, OTP email verification, and password reset flows.
 
-This server provides complete authentication workflows—including OTP-based email verification, user sign-up/sign-in, JSON Web Token (JWT) management with refresh mechanics, password reset options, and protected user profile routes.
+This project currently implements:
 
----
-
-## 🛠 Tech Stack
-
-* **Runtime & Framework:** Node.js, Express.js (TypeScript)
-* **Database ORM:** Prisma ORM
-* **JWT Management:** `jose` (Modern cryptographic utility for tokens)
-* **Validation:** `zod`
-* **Email Service:** `nodemailer`
-* **Security:** `bcryptjs` for password hashing
+- user signup with email verification OTP
+- sign in with access/refresh tokens
+- authenticated profile retrieval via middleware
+- forgot password and reset password flows
+- token refresh support
+- sign out endpoint
+- validation and secure password hashing
 
 ---
 
-## 📁 Project Structure
+## Tech stack
+
+- Node.js + Express 5
+- TypeScript
+- Prisma ORM with a contract-based Postgres configuration
+- PostgreSQL connection via `@prisma/orm-postgres`
+- JWTs via `jose`
+- password hashing via `bcryptjs`
+- schema validation via `zod`
+- email delivery via `nodemailer`
+
+---
+
+## Project structure
 
 ```text
-
 auth-server/
-├── .env
-├── .env.example
-├── .gitattributes
-├── .gitignore
+├── index.ts
 ├── package.json
 ├── pnpm-lock.yaml
 ├── pnpm-workspace.yaml
-├── prisma-8.md
 ├── prisma.config.ts
-├── README.md
+├── prisma-8.md
 ├── tsconfig.json
-├── index.ts
-└── src/
-    ├── config/
-    │   └── env.ts
-    ├── controllers/
-    │   ├── forget.controller.ts
-    │   ├── refresh.controller.ts
-    │   ├── signIn.controller.ts
-    │   ├── signOut.controller.ts
-    │   ├── signUp.controller.ts
-    │   └── verifyMe.controller.ts
-    ├── lib/
-    │   ├── jwt.ts
-    │   ├── mailer.ts
-    │   ├── tokens.ts
-    │   └── validations.ts
-    ├── middleware/
-    │   └── auth.ts
-    ├── prisma/
-    │   ├── contract.d.ts
-    │   ├── contract.json
-    │   ├── contract.prisma
-    │   └── db.ts
-    └── routes/
-        └── auth.route.ts
+├── README.md
+├── src/
+│   ├── config/
+│   │   └── env.ts
+│   ├── controllers/
+│   │   ├── forget.controller.ts
+│   │   ├── refresh.controller.ts
+│   │   ├── signIn.controller.ts
+│   │   ├── signOut.controller.ts
+│   │   ├── signUp.controller.ts
+│   │   └── verifyMe.controller.ts
+│   ├── lib/
+│   │   ├── jwt.ts
+│   │   ├── mailer.ts
+│   │   ├── tokens.ts
+│   │   └── validations.ts
+│   ├── middleware/
+│   │   └── auth.ts
+│   ├── prisma/
+│   │   ├── contract.d.ts
+│   │   ├── contract.json
+│   │   ├── contract.prisma
+│   │   └── db.ts
+│   └── routes/
+│       └── auth.route.ts
+└── migrations/
+    └── app/
+        └── ...
 ```
+
+Important note: this repo does not use a classic `prisma/schema.prisma` file. The Prisma setup is contract-driven and defined under `src/prisma/contract.prisma` with configuration in `prisma.config.ts`.
 
 ---
 
-## ⚙️ Prerequisites & Installation
+## Environment setup
 
-### 1. Requirements
-* **Node.js**: `v18.x` or higher
-* **npm** / **yarn** / **pnpm**
-* PostgreSQL, MySQL, or SQLite database configured with Prisma
-
-### 2. Environment Setup
-
-Create a `.env` file in the root directory and populate it with the required configuration key-value pairs:
+Create a `.env` file in the project root:
 
 ```env
-# Server Configuration
 PORT=5000
 NODE_ENV=development
 
-# Secrets (Must be at least 32 characters)
-JWT_SECRET=your_super_secret_jwt_access_key_min_32_chars
-JWT_REFRESH_SECRET=your_super_secret_jwt_refresh_key_min_32_chars
+JWT_SECRET=replace_with_a_long_secure_secret_minimum_32_chars
+JWT_REFRESH_SECRET=replace_with_a_different_long_secure_secret_minimum_32_chars
 
-# Database URL
 DATABASE_URL=postgresql://user:password@localhost:5432/auth_db?schema=public
 
-# Nodemailer / SMTP Config
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your_email@gmail.com
-SMTP_PASS=your_smtp_app_password
-SMTP_FROM="Auth Admin" <your_email@gmail.com>
+SMTP_PASS=your_app_password
+SMTP_FROM=your_email@gmail.com
 ```
 
-### 3. Setup Commands
+Notes:
+
+- `PORT` is read as a string and used by the Express app
+- `NODE_ENV` is restricted to `development`, `production`, or `test`
+- `JWT_SECRET` and `JWT_REFRESH_SECRET` must be at least 32 characters
+- `SMTP_FROM` is expected to be a valid email string in the current config validation
+
+---
+
+## Installation
+
+Use your package manager of choice. The project includes `pnpm` lock files and the repo is set up for a modern TypeScript workflow.
 
 ```bash
-# Install dependencies
+pnpm install
+pnpm dev
+```
+
+Alternative with npm:
+
+```bash
 npm install
-
-# Run database migrations with Prisma
-npx prisma migrate dev --name init
-
-# Start server in development mode
 npm run dev
+```
+
+Development mode starts the server with:
+
+```bash
+tsx watch index.ts
+```
+
+Production build:
+
+```bash
+pnpm build
+pnpm start
 ```
 
 ---
 
-## 🗄️ Recommended Prisma Schema (`prisma/schema.prisma`)
+## Database model
+
+The active Prisma contract defines these tables:
 
 ```prisma
+// src/prisma/contract.prisma
 
 model User {
   id         Int      @id @default(autoincrement())
@@ -136,180 +163,279 @@ model UserOtp {
 
   @@map("user_otp")
 }
+```
 
+The app creates users and stores one OTP record per user for email verification or password reset flows.
+
+---
+
+## API routes
+
+Base path: `/api/auth`
+
+### 1) Sign up
+
+- Method: `POST`
+- Route: `/api/auth/signup`
+- Public
+
+Request body:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "SecurePassword123!",
+  "name": "John Doe"
+}
+```
+
+Success response:
+
+```json
+{
+  "message": "Registration successful. OTP sent to email."
+}
+```
+
+Behavior:
+
+- checks if the email already exists
+- hashes the password with `bcryptjs`
+- creates the user with `isVerified: false`
+- generates a 6-digit OTP
+- stores the OTP with a 10-minute expiry
+- sends the OTP email
+
+---
+
+### 2) Verify OTP
+
+- Method: `POST`
+- Route: `/api/auth/verify-otp`
+- Public
+
+Request body:
+
+```json
+{
+  "email": "user@example.com",
+  "otp": "123456"
+}
+```
+
+Success response:
+
+```json
+{
+  "message": "Email verified successfully"
+}
 ```
 
 ---
 
-## 🔌 API Documentation
+### 3) Sign in
 
-### Base URL
-`/api/auth`
+- Method: `POST`
+- Route: `/api/auth/signin`
+- Public
+
+Request body:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "SecurePassword123!"
+}
+```
+
+Success response:
+
+```json
+{
+  "accessToken": "<JWT_ACCESS_TOKEN>",
+  "refreshToken": "<JWT_REFRESH_TOKEN>"
+}
+```
+
+Behavior:
+
+- validates the credentials
+- checks `isVerified`
+- issues an access token valid for 15 minutes
+- issues a refresh token valid for 7 days
 
 ---
 
-### 1. Sign Up
-* **Endpoint:** `POST /api/auth/signup`
-* **Access:** Public
-* **Description:** Creates a new unverified user and emails a 6-digit OTP code for verification.
-* **Request Body:**
-  ```json
-  {
+### 4) Forgot password
+
+- Method: `POST`
+- Route: `/api/auth/forgot-password`
+- Public
+
+Request body:
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+Success response:
+
+```json
+{
+  "message": "Password reset OTP sent to email."
+}
+```
+
+When the email is not found, the server returns a generic message to reduce user enumeration risk:
+
+```json
+{
+  "message": "If an account exists, an OTP has been sent."
+}
+```
+
+---
+
+### 5) Reset password
+
+- Method: `POST`
+- Route: `/api/auth/reset-password`
+- Public
+
+Request body:
+
+```json
+{
+  "email": "user@example.com",
+  "otp": "123456",
+  "newPassword": "NewSecurePassword123!"
+}
+```
+
+Success response:
+
+```json
+{
+  "message": "Password updated successfully"
+}
+```
+
+Behavior:
+
+- verifies the OTP and expiry time
+- hashes the new password
+- updates the user password
+- deletes the used OTP record
+
+---
+
+### 6) Refresh access token
+
+- Method: `POST`
+- Route: `/api/auth/refresh`
+- Public
+
+Request body:
+
+```json
+{
+  "refreshToken": "<JWT_REFRESH_TOKEN>"
+}
+```
+
+Success response:
+
+```json
+{
+  "accessToken": "<NEW_JWT_ACCESS_TOKEN>"
+}
+```
+
+---
+
+### 7) Sign out
+
+- Method: `POST`
+- Route: `/api/auth/signout`
+- Public
+
+Success response:
+
+```json
+{
+  "message": "Signed out successfully"
+}
+```
+
+This endpoint currently acts as a client-facing sign-out acknowledgement. It does not revoke tokens on the server side.
+
+---
+
+### 8) Get authenticated user
+
+- Method: `GET`
+- Route: `/api/auth/me`
+- Protected
+
+Headers:
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+Success response:
+
+```json
+{
+  "user": {
+    "id": 1,
     "email": "user@example.com",
-    "password": "SecurePassword123!",
-    "name": "John Doe"
+    "name": "John Doe",
+    "isVerified": true,
+    "createdAt": "2026-10-06T15:00:00.000Z",
+    "updatedAt": "2026-10-06T15:00:00.000Z"
   }
-  ```
-* **Response (201 Created):**
-  ```json
-  {
-    "message": "Registration successful. OTP sent to email."
-  }
-  ```
+}
+```
+
+The response removes the password field before returning the user object.
 
 ---
 
-### 2. Verify Email OTP
-* **Endpoint:** `POST /api/auth/verify-otp`
-* **Access:** Public
-* **Description:** Verifies user email with the provided OTP.
-* **Request Body:**
-  ```json
-  {
-    "email": "user@example.com",
-    "otp": "123456"
-  }
-  ```
-* **Response (200 OK):**
-  ```json
-  {
-    "message": "Email verified successfully"
-  }
-  ```
+## Authentication and security details
+
+The current implementation includes:
+
+- bcrypt password hashing with 12 salt rounds
+- JWT access tokens valid for 15 minutes
+- JWT refresh tokens valid for 7 days
+- OTP expiry set to 10 minutes
+- strict input validation using `zod`
+- user-enumeration protection for password reset requests
+- token verification middleware for protected routes
 
 ---
 
-### 3. Sign In
-* **Endpoint:** `POST /api/auth/signin`
-* **Access:** Public
-* **Description:** Validates user credentials and returns JWT Access and Refresh tokens.
-* **Request Body:**
-  ```json
-  {
-    "email": "user@example.com",
-    "password": "SecurePassword123!"
-  }
-  ```
-* **Response (200 OK):**
-  ```json
-  {
-    "accessToken": "<JWT_ACCESS_TOKEN>",
-    "refreshToken": "<JWT_REFRESH_TOKEN>"
-  }
-  ```
+## Notes for development
+
+- The app listens on `env.PORT` in `index.ts`
+- The main router is mounted at `/api/auth`
+- The `signOut` route is informational; client-side token cleanup is expected
+- Email sending depends on valid SMTP credentials in `.env`
+- The project expects a Postgres database connection string in `DATABASE_URL`
 
 ---
 
-### 4. Forgot Password (Request OTP)
-* **Endpoint:** `POST /api/auth/forgot-password`
-* **Access:** Public
-* **Description:** Sends a password reset OTP code to the requested email.
-* **Request Body:**
-  ```json
-  {
-    "email": "user@example.com"
-  }
-  ```
-* **Response (200 OK):**
-  ```json
-  {
-    "message": "If an account exists, an OTP has been sent."
-  }
-  ```
+## Useful scripts
 
----
+```bash
+pnpm dev
+pnpm build
+pnpm start
+pnpm lint
+pnpm format
+```
 
-### 5. Reset Password
-* **Endpoint:** `POST /api/auth/reset-password`
-* **Access:** Public
-* **Description:** Verifies OTP and updates the account password.
-* **Request Body:**
-  ```json
-  {
-    "email": "user@example.com",
-    "otp": "123456",
-    "newPassword": "NewSecurePassword123!"
-  }
-  ```
-* **Response (200 OK):**
-  ```json
-  {
-    "message": "Password updated successfully"
-  }
-  ```
-
----
-
-### 6. Refresh Access Token
-* **Endpoint:** `POST /api/auth/refresh`
-* **Access:** Public
-* **Description:** Exchanges a valid Refresh Token for a new Access Token.
-* **Request Body:**
-  ```json
-  {
-    "refreshToken": "<JWT_REFRESH_TOKEN>"
-  }
-  ```
-* **Response (200 OK):**
-  ```json
-  {
-    "accessToken": "<NEW_JWT_ACCESS_TOKEN>"
-  }
-  ```
-
----
-
-### 7. Sign Out
-* **Endpoint:** `POST /api/auth/signout`
-* **Access:** Public
-* **Description:** Informs the server of sign out (clears state/cookies on client side).
-* **Response (200 OK):**
-  ```json
-  {
-    "message": "Signed out successfully"
-  }
-  ```
-
----
-
-### 8. Get Verified User Profile
-* **Endpoint:** `GET /api/auth/me`
-* **Access:** Protected (Requires `Authorization: Bearer <accessToken>`)
-* **Headers:**
-  ```http
-  Authorization: Bearer <accessToken>
-  ```
-* **Response (200 OK):**
-  ```json
-  {
-    "user": {
-      "id": "uuid-v4-string",
-      "email": "user@example.com",
-      "name": "John Doe",
-      "isVerified": true,
-      "createdAt": "2026-10-06T15:00:00.000Z"
-    }
-  }
-  ```
-
----
-
-## 🔒 Security Best Practices Implemented
-
-1. **Password Hashing:** Passwords are auto-hashed using `bcryptjs` with standard salt rounds (12).
-2. **User Enumeration Defense:** Password reset requests return generic response messages to avoid revealing whether an email exists in the database.
-3. **Token Lifespans:**
-   * Access Token: `15 minutes`
-   * Refresh Token: `7 days`
-   * OTP Expiry: `10 minutes`
-4. **Input Sanitization:** All incoming request parameters undergo strict type and structure validation via `zod`.
+If you are adding a new schema or database model, you will likely need to work with the Prisma contract files under `src/prisma/`, not a conventional `schema.prisma` at the root.
