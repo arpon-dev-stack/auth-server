@@ -1,0 +1,8 @@
+
+allowBuilds:
+  esbuild: true
+  msgpackr-extract: true
+  workerd: true
+
+overrides:
+  "prisma>@prisma/orm-toolchain": 8.0.0-rc.14
